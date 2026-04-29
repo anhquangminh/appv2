@@ -16,7 +16,6 @@ import 'package:ducanherp/routes/app_router.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -27,8 +26,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
 
   String? emailError;
   String? passwordError;
@@ -51,14 +50,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedEmail = prefs.getString('saved_email') ?? '';
-    final savedPassword = prefs.getString('saved_password') ?? '';
-    final remember = prefs.getBool('remember_me') ?? false;
-
     setState(() {
-      emailController.text = savedEmail;
-      passwordController.text = savedPassword;
-      _rememberMe = remember;
+      emailController.text = prefs.getString('saved_email') ?? '';
+      passwordController.text = prefs.getString('saved_password') ?? '';
+      _rememberMe = prefs.getBool('remember_me') ?? false;
     });
   }
 
@@ -69,9 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.setString('saved_password', passwordController.text);
       await prefs.setBool('remember_me', true);
     } else {
-      await prefs.remove('saved_email');
-      await prefs.remove('saved_password');
-      await prefs.setBool('remember_me', false);
+      await prefs.clear();
     }
   }
 
@@ -102,6 +95,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
       backgroundColor: context.background,
       body: BlocListener<AppUserBloc, AppUserState>(
@@ -125,9 +120,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   );
 
-              final permissionBloc =
-                  // ignore: use_build_context_synchronously
-                  BlocProvider.of<PermissionBloc>(context);
+              // ignore: use_build_context_synchronously
+              final permissionBloc = context.read<PermissionBloc>();
 
               permissionBloc.add(
                 FetchPermissions(
@@ -138,19 +132,15 @@ class _LoginScreenState extends State<LoginScreen> {
               );
 
               permissionBloc.stream
-                  .firstWhere((permState) => permState is PermissionLoaded)
+                  .firstWhere((e) => e is PermissionLoaded)
                   .then((permState) async {
                 final permissions =
                     (permState as PermissionLoaded).permissions;
 
                 final prefs = await SharedPreferences.getInstance();
-                final permissionJsonList =
-                    permissions.map((p) => jsonEncode(p.toJson())).toList();
-
-                await prefs.setStringList('permissions', permissionJsonList);
-                await prefs.setString(
-                  'permissions_date',
-                  DateTime.now().toIso8601String(),
+                await prefs.setStringList(
+                  'permissions',
+                  permissions.map((e) => jsonEncode(e.toJson())).toList(),
                 );
 
                 // ignore: use_build_context_synchronously
@@ -166,229 +156,169 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (context, state) {
             return Stack(
               children: [
-                SafeArea(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.sm,
+                Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isTablet
+                          ? MediaQuery.of(context).size.width * 0.2
+                          : AppSpacing.xl,
+                    ),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: AppSpacing.xxxl),
+
+                        /// LOGO
+                        Image.asset(
+                          'assets/images/logo.png',
+                          height: 90,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '9:41',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: context.textPrimary,
+
+                        const SizedBox(height: AppSpacing.lg),
+
+                        Text(
+                          'Chào mừng trở lại!',
+                          style: context.theme.textTheme.headlineMedium!
+                              .copyWith(fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center,
+                        ),
+
+                        const SizedBox(height: AppSpacing.sm),
+
+                        Text(
+                          'Vui lòng đăng nhập để tiếp tục quản lý công việc.',
+                          style: context.theme.textTheme.bodyMedium!
+                              .copyWith(color: context.textSecondary),
+                          textAlign: TextAlign.center,
+                        ),
+
+                        const SizedBox(height: AppSpacing.xxxl),
+
+                        /// CARD
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          decoration: BoxDecoration(
+                            color: context.surface,
+                            borderRadius: AppRadius.xlRadius,
+                            boxShadow: [
+                              BoxShadow(
+                                color: context.shadow,
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
                               ),
-                            ),
-                            Row(
-                              children: [
-                                Icon(Icons.signal_cellular_4_bar,
-                                    size: 16, color: context.textPrimary),
-                                const SizedBox(width: AppSpacing.xs),
-                                Icon(Icons.wifi,
-                                    size: 16, color: context.textPrimary),
-                                const SizedBox(width: AppSpacing.xs),
-                                Icon(Icons.battery_full,
-                                    size: 16, color: context.textPrimary),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xxl),
+                            ],
+                          ),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: AppSpacing.xxxl),
-                              Image.asset('assets/images/logo.png',
-                                  height: 100),
-                              const SizedBox(height: AppSpacing.md),
-                              Text(
-                                'Hệ Thống Quản Lý',
-                                style: GoogleFonts.inter(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: context.textPrimary,
-                                ),
-                              ),
-                              
-                              const SizedBox(height: AppSpacing.xxxl),
-
-                              _buildLabel('TÊN ĐĂNG NHẬP'),
-                              const SizedBox(height: AppSpacing.xs),
-                              _buildTextField(
+                              _label('Tên đăng nhập / Email'),
+                              const SizedBox(height: AppSpacing.sm),
+                              _input(
                                 controller: emailController,
-                                hintText: 'Nhập email',
-                                icon: Icons.person_outline,
-                                errorText: emailError,
+                                hint: 'example@evergreen.com',
+                                icon: Icons.alternate_email,
+                                error: emailError,
                               ),
-
                               const SizedBox(height: AppSpacing.lg),
-
-                              _buildLabel('MẬT KHẨU'),
-                              const SizedBox(height: AppSpacing.xs),
-                              _buildTextField(
+                              _label('Mật khẩu'),
+                              const SizedBox(height: AppSpacing.sm),
+                              _input(
                                 controller: passwordController,
-                                hintText: '••••••••',
+                                hint: '••••••••',
                                 icon: Icons.lock_outline,
                                 isPassword: true,
-                                errorText: passwordError,
-                                onSubmitted: (_) => _handleLogin(),
+                                error: passwordError,
                               ),
-
                               const SizedBox(height: AppSpacing.md),
 
+                              /// remember + forgot
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  GestureDetector(
-                                    onTap: () => setState(
-                                        () => _rememberMe = !_rememberMe),
-                                    child: Row(
-                                      children: [
-                                        SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: Checkbox(
-                                            value: _rememberMe,
-                                            onChanged: (val) => setState(
-                                                () => _rememberMe = val!),
-                                            activeColor: context.primary,
-                                            side: BorderSide(
-                                                color: context.border),
-                                          ),
-                                        ),
-                                        const SizedBox(width: AppSpacing.sm),
-                                        Text(
-                                          'Ghi nhớ đăng nhập',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            color: context.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                  Checkbox(
+                                    value: _rememberMe,
+                                    onChanged: (v) =>
+                                        setState(() => _rememberMe = v!),
                                   ),
+                                  Text(
+                                    'Ghi nhớ đăng nhập',
+                                    style: context.theme.textTheme.bodyMedium,
+                                  ),
+                                  const Spacer(),
                                   TextButton(
                                     onPressed: () {},
                                     child: Text(
-                                      'QUÊN MẬT KHẨU?',
-                                      style: GoogleFonts.robotoCondensed(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: context.primary,
-                                      ),
+                                      'Quên mật khẩu?',
+                                      style: context
+                                          .theme.textTheme.bodyMedium!
+                                          .copyWith(color: context.primary),
                                     ),
-                                  ),
+                                  )
                                 ],
                               ),
 
-                              const SizedBox(height: AppSpacing.xl),
+                              const SizedBox(height: AppSpacing.lg),
 
                               if (state.errorMessage != null)
                                 Padding(
-                                  padding:
-                                      const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.only(
+                                      bottom: AppSpacing.sm),
                                   child: Text(
                                     state.errorMessage!,
-                                    style: TextStyle(
-                                      color: context.error,
-                                      fontSize: 12,
-                                    ),
+                                    style: TextStyle(color: context.error),
                                   ),
                                 ),
 
+                              /// BUTTON
                               SizedBox(
                                 width: double.infinity,
-                                height: 56,
                                 child: ElevatedButton(
                                   onPressed: _handleLogin,
-                                  child: Text(
-                                    'ĐĂNG NHẬP',
-                                    style:
-                                        GoogleFonts.robotoCondensed(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  child: const Text('ĐĂNG NHẬP'),
                                 ),
                               ),
-
-                              const SizedBox(height: AppSpacing.xxxl),
-
-                              Row(
-                                children: [
-                                  Expanded(
-                                      child:
-                                          Divider(color: context.border)),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.md),
-                                    child: Text(
-                                      'Bạn chưa có tài khoản?',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: context.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                      child:
-                                          Divider(color: context.border)),
-                                ],
-                              ),
-
-                              const SizedBox(height: AppSpacing.lg),
-
-                              SizedBox(
-                                width: double.infinity,
-                                height: 56,
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                        context, '/register');
-                                  },
-                                  icon: Icon(Icons.person_add_outlined,
-                                      color: context.textPrimary),
-                                  label: const Text(
-                                      'Yêu cầu tạo tài khoản mới'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor:
-                                        context.textPrimary,
-                                    side: BorderSide(
-                                        color: context.border),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: AppSpacing.xxxl),
-
-                              Text(
-                                '© 2024 Quang Minh. All rights reserved.',
-                                style: GoogleFonts.robotoCondensed(
-                                  fontSize: 10,
-                                  color: context.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
                             ],
                           ),
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(height: AppSpacing.xl),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Chưa có tài khoản?',
+                              style: context.theme.textTheme.bodyMedium,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            GestureDetector(
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/register'),
+                              child: Text(
+                                'Đăng ký ngay',
+                                style: context.theme.textTheme.bodyMedium!
+                                    .copyWith(color: context.primary),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: AppSpacing.xxxl),
+
+                        Text(
+                          '©2026 design by quang minh',
+                          style: context.theme.textTheme.labelSmall!
+                              .copyWith(color: context.textHint),
+                          textAlign: TextAlign.center,
+                        ),
+
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
+                    ),
                   ),
                 ),
 
                 if (state.isLoading)
                   Container(
-                    color: context.opacity(Colors.black, 0.5),
+                    color: context.opacity(context.black, 0.4),
                     child: const Center(
                       child: CircularProgressIndicator(),
                     ),
@@ -401,27 +331,19 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        text,
-        style: GoogleFonts.robotoCondensed(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: context.textSecondary,
-        ),
-      ),
+  Widget _label(String text) {
+    return Text(
+      text,
+      style: context.theme.textTheme.labelLarge,
     );
   }
 
-  Widget _buildTextField({
+  Widget _input({
     required TextEditingController controller,
-    required String hintText,
+    required String hint,
     required IconData icon,
-    String? errorText,
+    String? error,
     bool isPassword = false,
-    void Function(String)? onSubmitted,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,59 +351,28 @@ class _LoginScreenState extends State<LoginScreen> {
         TextField(
           controller: controller,
           obscureText: isPassword && !_isPasswordVisible,
-          style: GoogleFonts.inter(color: context.textPrimary),
-          onSubmitted: onSubmitted,
           decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: TextStyle(color: context.textSecondary),
-            prefixIcon:
-                Icon(icon, color: context.textSecondary),
+            hintText: hint,
+            prefixIcon: Icon(icon),
             suffixIcon: isPassword
                 ? IconButton(
-                    icon: Icon(
-                      _isPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                      color: context.textSecondary,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
+                    icon: Icon(_isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off),
+                    onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible),
                   )
                 : null,
-            filled: true,
-            fillColor: context.surfaceLow,
-            border: OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: context.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: context.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius:
-                  BorderRadius.circular(AppRadius.md),
-              borderSide:
-                  BorderSide(color: context.primary, width: 1.5),
-            ),
           ),
         ),
-        if (errorText != null)
+        if (error != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              errorText,
-              style: TextStyle(
-                color: context.error,
-                fontSize: 12,
-              ),
+              error,
+              style: TextStyle(color: context.error),
             ),
-          ),
+          )
       ],
     );
   }

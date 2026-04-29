@@ -6,67 +6,42 @@ extension AppThemeExt on BuildContext {
 
   ColorScheme get cs => theme.colorScheme;
 
-  // =========================
-  // 🎨 PRIMARY
-  // =========================
   Color get primary => cs.primary;
   Color get onPrimary => cs.onPrimary;
+  Color get primaryContainer => cs.primaryContainer;
+  Color get secondaryContainer => cs.secondaryContainer;
 
-  // =========================
-  // 🧱 SURFACE
-  // =========================
   Color get surface => cs.surface;
   Color get background => cs.surfaceContainer;
   Color get surfaceLow => cs.surfaceContainerLow;
+  Color get surfaceHigh => cs.surfaceContainerHigh;
+  Color get surfaceHighest => cs.surfaceContainerHighest;
 
-  Color get surfaceHigh =>
-      theme.brightness == Brightness.dark
-          ? AppColors.surfaceLowDark
-          : AppColors.surfaceLow;
-
-  Color get divider =>
-      theme.brightness == Brightness.dark
-          ? AppColors.dividerDark
-          : AppColors.divider;
+  Color get divider => cs.outlineVariant.withValues(alpha: 0.15);
 
   Color get disabled =>
       theme.brightness == Brightness.dark
           ? AppColors.disabledDark
           : AppColors.disabled;
 
-  // =========================
-  // ✍️ TEXT
-  // =========================
   Color get textPrimary => cs.onSurface;
   Color get textSecondary => cs.onSurfaceVariant;
 
   Color get textHint =>
       theme.brightness == Brightness.dark
-          ? AppColors.textMutedDark.withValues(alpha: 0.6)
-          : AppColors.textMuted.withValues(alpha: 0.6);
+          ? AppColors.textHintDark
+          : AppColors.textHint;
 
-  // =========================
-  // 📏 BORDER
-  // =========================
   Color get border => cs.outline;
+  Color get borderStrong => cs.outlineVariant.withValues(alpha: 0.15);
 
-  Color get borderStrong =>
-      theme.brightness == Brightness.dark
-          ? AppColors.borderDark
-          : AppColors.border;
-
-  // =========================
-  // 🎯 ACCENT
-  // =========================
   Color get success => AppColors.accentGreen;
   Color get info => AppColors.accentBlue;
   Color get warning => AppColors.accentOrange;
   Color get error => AppColors.accentRed;
   Color get purple => AppColors.accentPurple;
+  Color get focusPulse => AppColors.primaryFixedDim;
 
-  // =========================
-  // 🌈 COMMON COLORS (THÊM MỚI)
-  // =========================
   Color get white => Colors.white;
   Color get black => Colors.black;
 
@@ -91,78 +66,44 @@ extension AppThemeExt on BuildContext {
   Color get indigo => Colors.indigo;
   Color get pink => Colors.pink;
 
-  // =========================
-  // 📊 CHART COLORS
-  // =========================
   Color get chartBlue => AppColors.accentBlue;
   Color get chartGreen => AppColors.accentGreen;
   Color get chartOrange => AppColors.accentOrange;
   Color get chartRed => AppColors.accentRed;
 
-  // =========================
-  // 🌈 GRADIENTS
-  // =========================
-  List<Color> get primaryGradient => [
-    theme.brightness == Brightness.dark
-        ? AppColors.primaryDark
-        : AppColors.primary,
-    (theme.brightness == Brightness.dark
-            ? AppColors.primaryDark
-            : AppColors.primary)
-        .withValues(alpha: 0.85),
-  ];
-
-  List<Color> get primaryG => theme.brightness == Brightness.dark
-    ? [
-        const Color(0xFF2DD4BF), // sáng hơn cho dark mode
-        const Color(0xFF0EA5E9),
-      ]
-    : [
-        const Color(0xFF0D4D3B), // đậm hơn cho light mode
-        const Color(0xFF334155),
+  List<Color> get primaryGradient => const [
+        AppColors.gradientStart,
+        AppColors.gradientEnd,
       ];
 
-  // Gradient mềm cho card / container
-  List<Color> get softGradient => [
-    theme.brightness == Brightness.dark
-        ? const Color(0xFF2A2A2A)
-        : const Color(0xFFFFFFFF),
-    theme.brightness == Brightness.dark
-        ? const Color(0xFF1A1A1A)
-        : const Color(0xFFF1F5F9),
-  ];
+  List<Color> get primaryG => primaryGradient;
 
-  // Gradient accent (nút, highlight)
-  List<Color> get accentGradient => [
-    const Color(0xFF3B82F6),
-    const Color(0xFF6366F1),
-  ];
+  List<Color> get softGradient => [
+        cs.surfaceContainerLowest,
+        cs.surfaceContainer,
+      ];
+
+  List<Color> get accentGradient => primaryGradient;
 
   List<Color> get successGradient => [
-    AppColors.accentGreen,
-    AppColors.accentGreen.withValues(alpha: 0.7),
-  ];
+        AppColors.accentGreen,
+        AppColors.accentGreen.withValues(alpha: 0.72),
+      ];
 
   List<Color> get warningGradient => [
-    AppColors.accentOrange,
-    AppColors.accentOrange.withValues(alpha: 0.7),
-  ];
+        AppColors.accentOrange,
+        AppColors.accentOrange.withValues(alpha: 0.72),
+      ];
 
   List<Color> get errorGradient => [
-    AppColors.accentRed,
-    AppColors.accentRed.withValues(alpha: 0.7),
-  ];
+        AppColors.accentRed,
+        AppColors.accentRed.withValues(alpha: 0.72),
+      ];
 
-  // =========================
-  // 🌫 SHADOW
-  // =========================
   Color get shadow =>
       theme.brightness == Brightness.dark
           ? AppColors.shadowDark
           : AppColors.shadow;
 
-  // =========================
-  // ✨ UTILS
-  // =========================
   Color opacity(Color color, double value) => color.withValues(alpha: value);
 }

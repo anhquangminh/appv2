@@ -1,59 +1,111 @@
+import 'package:ducanherp/core/themes/app_radius.dart';
+import 'package:ducanherp/core/themes/app_spacing.dart';
 import 'package:ducanherp/core/themes/app_theme_helper.dart';
+import 'package:ducanherp/logic/bloc/notification/notification_bloc.dart';
 import 'package:ducanherp/logic/bloc/notification/notification_state.dart';
+import 'package:ducanherp/presentation/pages/notification_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:ducanherp/logic/bloc/notification/notification_bloc.dart';
-import 'package:ducanherp/presentation/pages/notification_page.dart';
 
 class HomeAppBar extends StatefulWidget implements PreferredSizeWidget {
   final int currentIndex;
+  final VoidCallback? onPrimaryAction;
 
-  const HomeAppBar({super.key, required this.currentIndex});
+  const HomeAppBar({
+    super.key,
+    required this.currentIndex,
+    this.onPrimaryAction,
+  });
 
   @override
   State<HomeAppBar> createState() => _HomeAppBarState();
 
   @override
-  Size get preferredSize => const Size.fromHeight(48); // 👈 giảm chiều cao
+  Size get preferredSize => const Size.fromHeight(72);
 }
 
 class _HomeAppBarState extends State<HomeAppBar> {
   int countNotifi = 0;
   int countFBNoti = 0;
-  int totalNoti = 0;
 
-  String _getTitle() {
+  int get totalNoti => countNotifi + countFBNoti;
+
+  _AppBarConfig _getConfig() {
     switch (widget.currentIndex) {
       case 0:
-        return 'Quản lý công việc';
+        return const _AppBarConfig(
+          title: 'Quản lý công việc',
+          icon: Icons.assignment_rounded,
+        );
       case 1:
-        return 'Duyệt';
+        return const _AppBarConfig(
+          title: 'Duyệt',
+          icon: Icons.fact_check_rounded,
+        );
       case 2:
-        return 'Quản lý nhóm';
+        return const _AppBarConfig(
+          title: 'Quản lý nhóm',
+          icon: Icons.groups_2_rounded,
+          actionIcon: Icons.group_add_rounded,
+          actionTooltip: 'Thêm nhóm',
+        );
       case 3:
-        return 'Trang cá nhân';
+        return const _AppBarConfig(
+          title: 'Bảng thử nghiệm',
+          icon: Icons.science_rounded,
+        );
+      case 4:
+        return const _AppBarConfig(
+          title: 'Trang cá nhân',
+          icon: Icons.person_rounded,
+        );
       default:
-        return 'Ứng dụng';
+        return const _AppBarConfig(
+          title: 'Ứng dụng',
+          icon: Icons.dashboard_rounded,
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final config = _getConfig();
+
     return AppBar(
-      toolbarHeight: 48, // 👈 giảm chiều cao thực tế
-      backgroundColor: context.surface,
+      toolbarHeight: 72,
+      backgroundColor: context.surfaceHighest,
+      surfaceTintColor: context.primary.withValues(alpha: 0),
       elevation: 0,
-      centerTitle: true,
-      title: Text(
-        _getTitle(),
-        style: TextStyle(
-          color: context.textPrimary,
-          fontWeight: FontWeight.bold,
-          fontSize: 16, // 👈 giảm font cho cân đối
-        ),
+      shadowColor: context.shadow,
+      automaticallyImplyLeading: false,
+      titleSpacing: AppSpacing.lg,
+      title: Row(
+        children: [
+          Icon(config.icon, size: 20, color: context.primary),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              config.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontSize: 20,
+              ),
+            ),
+          ),
+        ],
       ),
-      iconTheme: IconThemeData(color: context.textPrimary, size: 20),
       actions: [
+        if (config.actionIcon != null)
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            child: _AppBarActionButton(
+              tooltip: config.actionTooltip ?? '',
+              icon: config.actionIcon!,
+              filled: true,
+              onTap: widget.onPrimaryAction,
+            ),
+          ),
         BlocConsumer<NotificationBloc, NotificationState>(
           listener: (context, state) {
             if (!mounted) return;
@@ -66,60 +118,112 @@ class _HomeAppBarState extends State<HomeAppBar> {
               countFBNoti = state.countNotifi;
             }
 
-            totalNoti = countNotifi + countFBNoti;
             setState(() {});
           },
           builder: (context, state) {
-            return Stack(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.notifications,
-                    color: context.textPrimary,
-                    size: 20,
+            return Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _AppBarActionButton(
+                    tooltip: 'Thông báo',
+                    icon: Icons.notifications_rounded,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationPage(),
+                        ),
+                      );
+                    },
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationPage(),
-                      ),
-                    );
-                  },
-                ),
-                if (totalNoti > 0)
-                  Positioned(
-                    right: 6,
-                    top: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 14,
-                        minHeight: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.error,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        totalNoti > 99 ? '99+' : totalNoti.toString(),
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: context.onPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 9,
+                  if (totalNoti > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xs,
+                          vertical: 1,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.error,
+                          borderRadius: AppRadius.pillRadius,
+                        ),
+                        child: Text(
+                          totalNoti > 99 ? '99+' : totalNoti.toString(),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: context.onPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 9,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             );
           },
         ),
       ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Divider(
+          height: 1,
+          thickness: 1,
+          color: context.borderStrong,
+        ),
+      ),
+    );
+  }
+}
+
+class _AppBarConfig {
+  final String title;
+  final IconData icon;
+  final IconData? actionIcon;
+  final String? actionTooltip;
+
+  const _AppBarConfig({
+    required this.title,
+    required this.icon,
+    this.actionIcon,
+    this.actionTooltip,
+  });
+}
+
+class _AppBarActionButton extends StatelessWidget {
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool filled;
+
+  const _AppBarActionButton({
+    required this.tooltip,
+    required this.icon,
+    this.onTap,
+    this.filled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.pillRadius,
+        child: Icon(
+            icon,
+            size: 20,
+            color: context.primary,
+          ),
+      ),
     );
   }
 }

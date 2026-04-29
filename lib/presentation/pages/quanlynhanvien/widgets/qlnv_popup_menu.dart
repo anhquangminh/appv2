@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:ducanherp/core/themes/app_radius.dart';
+import 'package:ducanherp/core/themes/app_spacing.dart';
+import 'package:ducanherp/core/themes/app_theme_helper.dart';
 import 'package:ducanherp/data/models/nhanvien_model.dart';
+import 'package:flutter/material.dart';
 
 class QLNVPopupMenu extends StatelessWidget {
   final NhanVienModel nhanVien;
@@ -20,7 +23,10 @@ class QLNVPopupMenu extends StatelessWidget {
     final isApproved = nhanVien.isActive == 3;
 
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert),
+      tooltip: 'Tuy chon',
+      color: context.surfaceHighest,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
+      icon: Icon(Icons.more_horiz_rounded, color: context.textSecondary),
       onSelected: (action) {
         switch (action) {
           case 'edit':
@@ -34,64 +40,70 @@ class QLNVPopupMenu extends StatelessWidget {
         }
       },
       itemBuilder: (_) {
-        final items = <PopupMenuEntry<String>>[];
-
-        items.add(
-          const PopupMenuItem(
+        final items = <PopupMenuEntry<String>>[
+          _buildItem(
+            context,
             value: 'edit',
-            child: Row(
-              children: [
-                Icon(Icons.edit, size: 18),
-                SizedBox(width: 8),
-                Text('Sửa'),
-              ],
-            ),
+            icon: Icons.edit_outlined,
+            label: 'Sua',
           ),
-        );
-
-        items.add(
-          const PopupMenuItem(
+          _buildItem(
+            context,
             value: 'delete',
-            child: Row(
-              children: [
-                Icon(Icons.delete, size: 18, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Xóa'),
-              ],
-            ),
+            icon: Icons.delete_outline,
+            label: 'Xoa',
+            iconColor: context.error,
           ),
-        );
+        ];
 
         if (!isApproved) {
           items.add(const PopupMenuDivider());
           items.add(
-            const PopupMenuItem(
+            _buildItem(
+              context,
               value: 'approve',
-              child: Row(
-                children: [
-                  Icon(Icons.check, size: 18, color: Colors.green),
-                  SizedBox(width: 8),
-                  Text('Duyệt'),
-                ],
-              ),
+              icon: Icons.check_circle_outline,
+              label: 'Duyet',
+              iconColor: context.success,
             ),
           );
           items.add(
-            const PopupMenuItem(
+            _buildItem(
+              context,
               value: 'unapprove',
-              child: Row(
-                children: [
-                  Icon(Icons.undo, size: 18, color: Colors.orange),
-                  SizedBox(width: 8),
-                  Text('Hủy duyệt'),
-                ],
-              ),
+              icon: Icons.undo_rounded,
+              label: 'Huy duyet',
+              iconColor: context.warning,
             ),
           );
         }
 
         return items;
       },
+    );
+  }
+
+  PopupMenuItem<String> _buildItem(
+    BuildContext context, {
+    required String value,
+    required IconData icon,
+    required String label,
+    Color? iconColor,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: iconColor ?? context.textPrimary),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: context.textPrimary),
+          ),
+        ],
+      ),
     );
   }
 }

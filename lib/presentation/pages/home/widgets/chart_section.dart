@@ -1,4 +1,7 @@
 import 'package:ducanherp/core/themes/app_theme_helper.dart';
+import 'package:ducanherp/core/themes/app_spacing.dart';
+import 'package:ducanherp/core/themes/app_radius.dart';
+import 'package:ducanherp/core/themes/app_shadows.dart';
 import 'package:ducanherp/data/models/status_report_model.dart';
 import 'package:ducanherp/data/models/group_report_model.dart';
 import 'package:ducanherp/presentation/pages/home/widgets/bar_chart.dart';
@@ -17,28 +20,30 @@ class ChartSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cố định Row để luôn hiển thị 2 biểu đồ song song theo chiều ngang
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // LEFT: LINE CHART
+        // BIỂU ĐỒ TRÁI: XU HƯỚNG
         Expanded(
           child: status != null
               ? _ChartCard(
-                  title: "TRẠNG THÁI",
+                  title: "XU HƯỚNG (TUẦN)",
                   child: LineChartWidget(status: status!),
                 )
-              : _loadingCard(context, "TRẠNG THÁI"),
+              : _loadingCard(context, "XU HƯỚNG (TUẦN)"),
         ),
 
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.md), // Khoảng cách nhỏ gọn giữa 2 biểu đồ
 
-        // RIGHT: BAR CHART
+        // BIỂU ĐỒ PHẢI: ĐỘI NHÓM
         Expanded(
           child: (groups != null && groups!.isNotEmpty)
               ? _ChartCard(
-                  title: "ĐỘI NHÓM",
+                  title: "ĐỘI NHÓM (%)",
                   child: BarChartWidget(groups: groups!),
                 )
-              : _loadingCard(context, "ĐỘI NHÓM"),
+              : _loadingCard(context, "ĐỘI NHÓM (%)"),
         ),
       ],
     );
@@ -48,7 +53,14 @@ class ChartSection extends StatelessWidget {
     return _ChartCard(
       title: title,
       child: Center(
-        child: CircularProgressIndicator(color: context.primary),
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            color: context.primary,
+            strokeWidth: 2,
+          ),
+        ),
       ),
     );
   }
@@ -65,36 +77,28 @@ class _ChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.all(12),
+    return Container(
+      // Giảm padding một chút để phù hợp khi chia đôi màn hình ngang
+      padding: const EdgeInsets.all(AppSpacing.md), 
       decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.border),
-        boxShadow: [
-          BoxShadow(
-            color: context.opacity(Colors.black, 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.surfaceHighest, // Trắng (surface-container-lowest) theo Tonal Nesting
+        borderRadius: AppRadius.xlRadius, // 1.5rem (xl) theo đúng quy định cho Task cards
+        boxShadow: AppShadows.soft, // Botanical Shadow nhẹ nhàng
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+            style: context.theme.textTheme.labelSmall?.copyWith(
               color: context.textSecondary,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           SizedBox(
-            height: 140,
+            height: 120, // Điều chỉnh chiều cao để cân đối với chiều rộng khi chia đôi
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),
               child: child,

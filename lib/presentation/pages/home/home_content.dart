@@ -38,10 +38,10 @@ class _HomeContentState extends State<HomeContent> {
           Container(
             margin: EdgeInsets.only(bottom: 16,top: 0),
             decoration: BoxDecoration(
-              color: context.surface,
+              color: context.surfaceLow,
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: TabSwitcher(
                 currentIndex: tabIndex,
                 onChanged: _onTabChanged,

@@ -1,5 +1,7 @@
 // ✅ UI CLEAN + MODERN (Material 3), chart đẹp hơn, không overflow, có legend + spacing chuẩn
 
+import 'package:ducanherp/core/themes/app_radius.dart';
+import 'package:ducanherp/core/themes/app_shadows.dart';
 import 'package:ducanherp/core/themes/app_spacing.dart';
 import 'package:ducanherp/core/themes/app_text_styles.dart';
 import 'package:ducanherp/core/themes/app_theme_helper.dart';
@@ -120,26 +122,18 @@ class _ThucHienTabState extends State<ThucHienTab> {
     );
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SummaryCard(model: model, onTap: _openDanhSachCongViecPage),
-
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: 16),
           _buildTrangThaiBar(report),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(child: _buildDanhGiaDonut(report)),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: _buildThoiHanBar(report)),
-            ],
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
+          SizedBox(height: 16),
+          _buildChartsRow(report),
+          SizedBox(height: 16),
           _buildUuTienHorizontal(report),
+           SizedBox(height: 80),
         ],
       ),
     );
@@ -181,7 +175,7 @@ class _ThucHienTabState extends State<ThucHienTab> {
                           ),
                     ),
                   ),
-                 leftTitles: AxisTitles(
+                  leftTitles: AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   topTitles: AxisTitles(
@@ -191,7 +185,7 @@ class _ThucHienTabState extends State<ThucHienTab> {
                     sideTitles: SideTitles(showTitles: false),
                   ),
                 ),
-                
+
                 barGroups: List.generate(data.length, (i) {
                   return BarChartGroupData(
                     x: i,
@@ -221,182 +215,281 @@ class _ThucHienTabState extends State<ThucHienTab> {
     );
   }
 
+  Widget _buildChartsRow(ReportNVTHModel report) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment:
+            CrossAxisAlignment.stretch, // Giúp các card cao bằng nhau
+        children: [
+          Expanded(child: _buildDanhGiaDonut(report)),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: _buildThoiHanBar(report)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDanhGiaDonut(ReportNVTHModel report) {
     final total = report.danhGia.daDanhGia + report.danhGia.chuaDanhGia;
 
-    if (total == 0) return _emptyCard('Đánh giá');
-
-    return _card(
-      'Đánh giá',
-      Column(
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: context.surfaceHighest,
+        borderRadius: AppRadius.xlRadius,
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 140,
-            child: PieChart(
-              PieChartData(
-                centerSpaceRadius: 40,
-                sectionsSpace: 2,
-                sections: [
-                  PieChartSectionData(
-                    value: report.danhGia.daDanhGia.toDouble(),
-                    color: context.success,
-                    radius: 30,
-                    title: '',
-                  ),
-                  PieChartSectionData(
-                    value: report.danhGia.chuaDanhGia.toDouble(),
-                    color: context.warning,
-                    radius: 30,
-                    title: '',
-                  ),
-                ],
-              ),
+          Text(
+            'ĐÁNH GIÁ',
+            style: context.theme.textTheme.labelMedium?.copyWith(
+              color: context.textSecondary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
             ),
           ),
-          const SizedBox(height: 8),
-          _legend([
-            ('Đã đánh giá', context.success),
-            ('Chưa đánh giá', context.warning),
-          ]),
+          const SizedBox(height: AppSpacing.lg),
+          if (total == 0)
+            const SizedBox(height: 140, child: Center(child: Text("Trống")))
+          else
+            // ✅ Giải pháp: Thay Expanded bằng SizedBox có height cố định
+            SizedBox(
+              height: 140,
+              child: PieChart(
+                PieChartData(
+                  centerSpaceRadius: 30,
+                  sectionsSpace: 4,
+                  sections: [
+                    PieChartSectionData(
+                      value: report.danhGia.daDanhGia.toDouble(),
+                      color: context.success,
+                      radius: 18,
+                      title: '',
+                    ),
+                    PieChartSectionData(
+                      value: report.danhGia.chuaDanhGia.toDouble(),
+                      color: context.warning,
+                      radius: 18,
+                      title: '',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.md),
+          _legend([('Đã xong', context.success), ('Chưa', context.warning)]),
         ],
       ),
     );
   }
 
   Widget _buildThoiHanBar(ReportNVTHModel report) {
-  final data = [
-    report.thoiHan.dungHan.toDouble(),
-    report.thoiHan.sapQuaHan.toDouble(),
-    report.thoiHan.quaHan.toDouble(),
-  ];
+    final data = [
+      report.thoiHan.dungHan.toDouble(),
+      report.thoiHan.sapQuaHan.toDouble(),
+      report.thoiHan.quaHan.toDouble(),
+    ];
 
-  final labels = ['Đúng hạn', 'Sắp quá hạn', 'Quá hạn'];
+    final labels = ['Đúng', 'Sắp', 'Trễ'];
 
-  return _card(
-    'Thời hạn',
-    SizedBox(
-      height: 180,
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          gridData: FlGridData(show: false),
-          borderData: FlBorderData(show: false),
-
-          // ✅ dùng bottomTitles làm labels
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 28,
-                getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  if (index < 0 || index >= labels.length) {
-                    return const SizedBox();
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      labels[index],
-                      style: AppTextStyles.small(context),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: context.surfaceHighest,
+        borderRadius: AppRadius.xlRadius,
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'THỜI HẠN',
+            style: context.theme.textTheme.labelMedium?.copyWith(
+              color: context.textSecondary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
             ),
           ),
-
-          barGroups: List.generate(data.length, (i) {
-            return BarChartGroupData(
-              x: i,
-              barRods: [
-                BarChartRodData(
-                  toY: data[i],
-                  width: 18,
-                  borderRadius: BorderRadius.circular(6),
-                  color: i == 0
-                      ? context.success
-                      : i == 1
-                          ? context.warning
-                          : context.error,
+          const SizedBox(height: AppSpacing.lg),
+          // ✅ Giải pháp: Đặt cùng một height (140) để đảm bảo cân bằng
+          SizedBox(
+            height: 140,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 24,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= labels.length) {
+                          return const SizedBox();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text(
+                            labels[index],
+                            style: AppTextStyles.small(
+                              context,
+                            ).copyWith(fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
-              ],
-            );
-          }),
-        ),
+                barGroups: List.generate(data.length, (i) {
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: data[i],
+                        width: 12,
+                        borderRadius: AppRadius.pillRadius,
+                        color:
+                            i == 0
+                                ? context.success
+                                : i == 1
+                                ? context.warning
+                                : context.error,
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY:
+                              (data.reduce((a, b) => a > b ? a : b) + 1)
+                                  .toDouble(),
+                          color: context.surfaceLow,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Thêm một spacer mờ để cân bằng với phần legend của chart bên trái
+          const SizedBox(height: 16),
+        ],
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildUuTienHorizontal(ReportNVTHModel report) {
     if (report.uuTien.isEmpty) return _emptyCard('Ưu tiên');
 
-    final max = report.uuTien
+    // Tìm giá trị max để tính toán tỷ lệ phần trăm hiển thị
+    final maxCount = report.uuTien
         .map((e) => e.soLuong)
-        .reduce((a, b) => a > b ? a : b);
+        .fold(0, (a, b) => a > b ? a : b);
 
-    return _card(
-      'Mức độ ưu tiên',
-      Column(
-        children:
-            report.uuTien.map((e) {
-              final percent = max == 0 ? 0 : e.soLuong / max;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: context.surfaceHighest,
+        borderRadius: AppRadius.xlRadius,
+        boxShadow: AppShadows.soft,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'MỨC ĐỘ ƯU TIÊN',
+            style: context.theme.textTheme.labelMedium?.copyWith(
+              color: context.textSecondary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Column(
+            children:
+                report.uuTien.map((e) {
+                  final double percent =
+                      maxCount == 0 ? 0 : e.soLuong / maxCount;
+                  final Color priorityColor = _getPriorityColor(e.mucDoUuTien);
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(e.mucDoUuTien, style: AppTextStyles.small(context)),
-                    const SizedBox(height: 4),
-                    Stack(
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Column(
                       children: [
-                        Container(
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: context.surfaceLow,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              e.mucDoUuTien,
+                              style: AppTextStyles.small(context).copyWith(
+                                color: context.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              e.soLuong.toString(),
+                              style: AppTextStyles.small(context).copyWith(
+                                color: priorityColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
-                        FractionallySizedBox(
-                          widthFactor: percent.toDouble(),
-                          child: Container(
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _getPriorityColor(e.mucDoUuTien),
-                              borderRadius: BorderRadius.circular(6),
+                        const SizedBox(height: AppSpacing.xs),
+                        ClipRRect(
+                          borderRadius: AppRadius.pillRadius,
+                          child: LinearProgressIndicator(
+                            value: percent,
+                            minHeight: 8,
+                            backgroundColor: context.surfaceLow,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              priorityColor,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
+          ),
+        ],
       ),
     );
   }
 
-  // ===================== UI =====================
+  /// Helper để mapping màu sắc theo Design System
+  Color _getPriorityColor(String priority) {
+    switch (priority.toLowerCase()) {
+      case 'khẩn cấp':
+      case 'cao':
+        return context.error;
+      case 'trung bình':
+        return context.warning;
+      case 'thấp':
+        return context.success;
+      default:
+        return context.primary;
+    }
+  }
 
+  // ===================== UI =====================
   Widget _card(String title, Widget child) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: context.surface,
+        color: context.surfaceHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.border),
       ),
@@ -467,16 +560,4 @@ class _ThucHienTabState extends State<ThucHienTab> {
     }
   }
 
-  Color _getPriorityColor(String level) {
-    switch (level.toLowerCase()) {
-      case 'cao':
-        return context.error;
-      case 'trung bình':
-        return context.warning;
-      case 'thấp':
-        return context.success;
-      default:
-        return context.info;
-    }
-  }
 }

@@ -197,7 +197,7 @@ class _CalendarPageState extends State<CalendarPage> {
                     return Stack(
                       children: [
                         AppCard(
-                          margin: const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           child: ListTile(
                             title: Text(

@@ -17,19 +17,36 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
-  final List<Widget> _pages = const [
-    HomeContent(),
-    DuyetScreen(),
-    QuanLyNhomPage(),
-    TestPage(),
-    ProfilePage(),
+  final ValueNotifier<int> _nhomActionNotifier = ValueNotifier<int>(0);
+
+  late final List<Widget> _pages = [
+    const HomeContent(),
+    const DuyetScreen(),
+    QuanLyNhomPage(actionNotifier: _nhomActionNotifier),
+    const TestPage(),
+    const ProfilePage(),
   ];
+
+  @override
+  void dispose() {
+    _nhomActionNotifier.dispose();
+    super.dispose();
+  }
+
+  void _handlePrimaryAppBarAction() {
+    if (_currentIndex == 2) {
+      _nhomActionNotifier.value++;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.background,
-      appBar: HomeAppBar(currentIndex: _currentIndex),
+      appBar: HomeAppBar(
+        currentIndex: _currentIndex,
+        onPrimaryAction: _handlePrimaryAppBarAction,
+      ),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomBar(
         currentIndex: _currentIndex,

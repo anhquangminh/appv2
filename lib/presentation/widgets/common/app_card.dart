@@ -1,48 +1,35 @@
-import 'package:ducanherp/core/themes/app_theme_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:ducanherp/core/themes/app_theme_helper.dart';
+import 'package:ducanherp/core/themes/app_radius.dart';
 
 class AppCard extends StatelessWidget {
   final Widget child;
-  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
-  final bool clickable;
 
-  const AppCard({
-    super.key,
-    required this.child,
-    this.margin,
-    this.onTap,
-    this.onLongPress,
-    this.clickable = true,
-  });
+  const AppCard({super.key, required this.child, this.padding, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final card = Card(
-      margin: margin ?? const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      elevation: 0,
-      color: context.surface,
-      shadowColor: context.opacity(context.textPrimary, 0.05),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: context.border,
-          width: 0.6,
-        ),
+    final card = Container(
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceHighest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.border.withValues(alpha: 0.3)),
       ),
       child: child,
     );
 
-    if (!clickable) {
-      return card;
-    }
+    if (onTap == null) return card;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: card,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: AppRadius.xlRadius,
+        onTap: onTap,
+        child: card,
+      ),
     );
   }
 }

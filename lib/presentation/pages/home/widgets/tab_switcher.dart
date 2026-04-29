@@ -21,7 +21,7 @@ class TabSwitcher extends StatelessWidget {
           height: 40,
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: context.surfaceLow,
+            color: context.surfaceHighest,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Stack(
@@ -36,11 +36,11 @@ class TabSwitcher extends StatelessWidget {
                 child: Container(
                   width: width,
                   decoration: BoxDecoration(
-                    color: context.surface,
+                    color: context.grey300,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: context.opacity(Colors.black, 0.06),
+                        color: context.opacity(Colors.black, 0.1),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       )

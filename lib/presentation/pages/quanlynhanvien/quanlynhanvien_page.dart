@@ -1,15 +1,21 @@
 import 'package:ducanherp/core/helpers/user_storage_helper.dart';
+import 'package:ducanherp/core/themes/app_radius.dart';
+import 'package:ducanherp/core/themes/app_spacing.dart';
+import 'package:ducanherp/core/themes/app_theme_helper.dart';
+import 'package:ducanherp/core/utils/snackbar_utils.dart';
 import 'package:ducanherp/data/models/application_user.dart';
+import 'package:ducanherp/data/models/nhanvien_model.dart';
+import 'package:ducanherp/logic/bloc/nhanvien/nhanvien_bloc.dart';
+import 'package:ducanherp/logic/bloc/nhanvien/nhanvien_event.dart';
+import 'package:ducanherp/logic/bloc/nhanvien/nhanvien_state.dart';
 import 'package:ducanherp/presentation/pages/quanlynhanvien/dialogs/qlnv_dialog.dart';
 import 'package:ducanherp/presentation/pages/quanlynhanvien/widgets/qlnv_filter_chip.dart';
 import 'package:ducanherp/presentation/pages/quanlynhanvien/widgets/qlnv_list_view.dart';
+import 'package:ducanherp/presentation/pages/quanlynhanvien/widgets/qlnv_page_header.dart';
 import 'package:ducanherp/presentation/pages/quanlynhanvien/widgets/qlnv_searchbar.dart';
+import 'package:ducanherp/presentation/pages/quanlynhanvien/widgets/qlnv_stats_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../logic/bloc/nhanvien/nhanvien_bloc.dart';
-import '../../../logic/bloc/nhanvien/nhanvien_event.dart';
-import '../../../logic/bloc/nhanvien/nhanvien_state.dart';
-import '../../../data/models/nhanvien_model.dart';
 
 class QuanLyNhanVienPage extends StatefulWidget {
   const QuanLyNhanVienPage({super.key});
@@ -22,30 +28,30 @@ class _QuanLyNhanVienPageState extends State<QuanLyNhanVienPage>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-  final TextEditingController _tenController = TextEditingController();
+
   ApplicationUser? user;
   late NhanVienModel searchVM;
-  bool loadChiNhanh = false;
-
-  final TextEditingController searchController = TextEditingController();
-
-  List<NhanVienModel> nhomNhanVienList = [];
+  List<NhanVienModel> nhanVienList = [];
   List<NhanVienModel> filteredList = [];
-
-  /// filter dạng CHIP
   Map<String, List<String>> filters = {};
-  Map<String, List<String>> currentFilters = {};
+  String searchQuery = '';
+  bool hasActiveFilters = false;
 
   @override
   void initState() {
     super.initState();
+    _initSearchVM();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUserData());
+  }
+
+  void _initSearchVM() {
     searchVM = NhanVienModel(
       id: '',
       tenNhanVien: '',
       taiKhoan: '',
       companyId: '',
       companyName: '',
-      groupId: user?.groupId ?? '',
+      groupId: '',
       departmentId: '',
       departmentName: '',
       chucVuId: '',
@@ -65,51 +71,33 @@ class _QuanLyNhanVienPageState extends State<QuanLyNhanVienPage>
       lastApprovalId: '',
       isStatus: '',
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) => loadUserData());
   }
 
-  Future<void> loadUserData() async {
+  Future<void> _loadUserData() async {
     final cachedUser = await UserStorageHelper.getCachedUserInfo();
-    if (cachedUser != null && mounted) {
-      setState(() {
-        user = cachedUser;
-        searchVM.groupId = user!.groupId;
-      });
-      // ignore: use_build_context_synchronously
-      context.read<NhanVienBloc>().add(GetNhanVienByVM(searchVM));
-    }
+    if (cachedUser == null || !mounted) return;
+
+    setState(() {
+      user = cachedUser;
+      searchVM.groupId = cachedUser.groupId;
+    });
+    _reloadNhanVien();
   }
 
-  @override
-  void dispose() {
-    _tenController.dispose();
-    super.dispose();
+  void _reloadNhanVien() {
+    context.read<NhanVienBloc>().add(GetNhanVienByVM(searchVM));
   }
 
   void _onSearchChanged(String value) {
-    final keyword = value.trim().toLowerCase();
-
-    if (keyword.isEmpty) {
-      setState(() {
-        filteredList = [];
-      });
-      return;
-    }
-
     setState(() {
-      filteredList =
-          nhomNhanVienList.where((nv) {
-            final taiKhoan = nv.taiKhoan.toLowerCase();
-            final tenNhanVien = nv.tenNhanVien.toLowerCase();
-
-            return taiKhoan.contains(keyword) || tenNhanVien.contains(keyword);
-          }).toList();
+      searchQuery = value.trim();
     });
   }
 
   void _onClearSearch() {
-    searchController.clear();
-    _onSearchChanged('');
+    setState(() {
+      searchQuery = '';
+    });
   }
 
   void _onFilterApplied(
@@ -119,22 +107,74 @@ class _QuanLyNhanVienPageState extends State<QuanLyNhanVienPage>
     setState(() {
       filters = appliedFilters;
       filteredList = source;
+      hasActiveFilters = appliedFilters.values.any(
+        (values) => values.isNotEmpty,
+      );
     });
   }
 
-  void _openAddDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => BlocProvider.value(
-            value: context.read<NhanVienBloc>(),
-            child: QLNVDialog(user: user!, searchVM: searchVM),
-          ),
-    );
+  void _clearFilters() {
+    setState(() {
+      filters.clear();
+      hasActiveFilters = false;
+      filteredList = nhanVienList;
+    });
   }
 
-  void _openEditDialog(NhanVienModel nv) {
+  void _removeSingleFilter(String key) {
+    setState(() {
+      // ❌ bỏ key hoàn toàn thay vì set []
+      filters.remove(key);
+
+      // cập nhật trạng thái filter
+      hasActiveFilters = filters.isNotEmpty;
+
+      // apply lại filter từ source gốc
+      _rebuildFilteredList();
+    });
+  }
+
+  void _rebuildFilteredList() {
+    if (filters.isEmpty) {
+      filteredList = nhanVienList;
+      return;
+    }
+
+    filteredList =
+        nhanVienList.where((nv) {
+          bool match = true;
+
+          filters.forEach((key, values) {
+            if (values.isEmpty) return;
+
+            switch (key) {
+              case 'department':
+                match &= values.contains(nv.departmentId);
+                break;
+
+              case 'position':
+                match &= values.contains(nv.chucVuId);
+                break;
+
+              case 'status':
+                match &= values.contains(nv.isActive.toString());
+                break;
+
+              case 'company':
+                match &= values.contains(nv.companyId);
+                break;
+
+              default:
+                break;
+            }
+          });
+
+          return match;
+        }).toList();
+  }
+
+  void _openDialog({NhanVienModel? nv}) {
+    if (user == null) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -146,166 +186,203 @@ class _QuanLyNhanVienPageState extends State<QuanLyNhanVienPage>
     );
   }
 
-  void _onDeleteNhanVien(NhanVienModel nv) {
-    showDialog(
+  Future<bool?> _showConfirmDialog({
+    required String title,
+    required String message,
+    String confirmLabel = 'Dong y',
+    bool destructive = false,
+  }) {
+    return showDialog<bool>(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: Text('Xác nhận xóa'),
+          (_) => AlertDialog(
+            backgroundColor: context.surfaceHighest,
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+            title: Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: context.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             content: Text(
-              'Bạn có chắc muốn xóa nhân viên "${nv.tenNhanVien}" không?',
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: context.textSecondary),
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context), // Đóng dialog
-                child: Text('Hủy'),
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Huy'),
               ),
-              TextButton(
-                onPressed: () {
-                  context.read<NhanVienBloc>().add(
-                    DeleteNhanVien(nv.id, user!.userName),
-                  );
-                  Navigator.pop(context); // Đóng dialog sau khi xóa
-                },
-                child: Text('Xóa', style: TextStyle(color: Colors.red)),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                style:
+                    destructive
+                        ? FilledButton.styleFrom(backgroundColor: context.error)
+                        : null,
+                child: Text(confirmLabel),
               ),
             ],
           ),
     );
   }
 
-  void _duyet(NhanVienModel nv) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Xác nhận duyệt'),
-            content: Text(
-              'Bạn có chắc muốn duyệt nhóm "${nv.taiKhoan}" không?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Hủy'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Đồng ý'),
-              ),
-            ],
-          ),
+  Future<void> _onDeleteNhanVien(NhanVienModel nv) async {
+    if (user == null) return;
+    final confirm = await _showConfirmDialog(
+      title: 'Xac nhan xoa',
+      message: 'Ban co chac muon xoa nhan vien "${nv.tenNhanVien}" khong?',
+      confirmLabel: 'Xoa',
+      destructive: true,
     );
+    if (confirm == true && mounted) {
+      context.read<NhanVienBloc>().add(DeleteNhanVien(nv.id, user!.userName));
+    }
+  }
 
-    if (confirm == true) {
-      // ignore: use_build_context_synchronously
+  Future<void> _duyetNhanVien(NhanVienModel nv) async {
+    if (user == null) return;
+    final confirm = await _showConfirmDialog(
+      title: 'Xac nhan duyet',
+      message: 'Ban co chac muon duyet nhan vien "${nv.taiKhoan}" khong?',
+    );
+    if (confirm == true && mounted) {
       context.read<NhanVienBloc>().add(DuyetNhanVien(nv.id, user!.userName));
-      // ignore: use_build_context_synchronously
-      context.read<NhanVienBloc>().add(GetNhanVienByVM(searchVM));
     }
   }
 
-  void _huyDuyet(NhanVienModel nv) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Xác nhận hủy duyệt'),
-            content: Text(
-              'Bạn có chắc muốn hủy duyệt nhóm "${nv.taiKhoan}" không?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Hủy'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Đồng ý'),
-              ),
-            ],
-          ),
+  Future<void> _huyDuyetNhanVien(NhanVienModel nv) async {
+    if (user == null) return;
+    final confirm = await _showConfirmDialog(
+      title: 'Xac nhan huy duyet',
+      message: 'Ban co chac muon huy duyet nhan vien "${nv.taiKhoan}" khong?',
     );
-
-    if (confirm == true) {
-      // ignore: use_build_context_synchronously
+    if (confirm == true && mounted) {
       context.read<NhanVienBloc>().add(HuyDuyetNhanVien(nv.id, user!.userName));
-      // ignore: use_build_context_synchronously
-      context.read<NhanVienBloc>().add(GetNhanVienByVM(searchVM));
     }
   }
+
+  List<NhanVienModel> get _displayList {
+    final source = hasActiveFilters ? filteredList : nhanVienList;
+    final keyword = searchQuery.trim().toLowerCase();
+
+    return source.where((nv) {
+      if (nv.taiKhoan == user?.userName) return false;
+      if (keyword.isEmpty) return true;
+
+      return nv.tenNhanVien.toLowerCase().contains(keyword) ||
+          nv.taiKhoan.toLowerCase().contains(keyword) ||
+          nv.chucVu.toLowerCase().contains(keyword) ||
+          nv.companyName.toLowerCase().contains(keyword) ||
+          nv.departmentName.toLowerCase().contains(keyword);
+    }).toList();
+  }
+
+  int get _departmentCount =>
+      _displayList
+          .map((item) => item.departmentId)
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .length;
+
+  int get _approvedCount =>
+      _displayList.where((item) => item.isActive == 3).length;
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    final nhanVienList =
-        (context.watch<NhanVienBloc>().state is NhanVienByVMLoaded)
-            ? (context.watch<NhanVienBloc>().state as NhanVienByVMLoaded)
-                .nhanViens
-            : <NhanVienModel>[];
-    nhomNhanVienList = nhanVienList;
-
-    return BlocListener<NhanVienBloc, NhanVienState>(
+    return BlocConsumer<NhanVienBloc, NhanVienState>(
       listener: (context, state) {
-        if (state is NhanVienSuccess) {
-          final msg = state.message;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(msg)));
-          // Reload list after successful operation
-          context.read<NhanVienBloc>().add(GetNhanVienByVM(searchVM));
+        if (state is NhanVienByVMLoaded) {
+          setState(() {
+            nhanVienList = state.nhanViens;
+            if (!hasActiveFilters) {
+              filteredList = state.nhanViens;
+            }
+          });
+        } else if (state is NhanVienSuccess) {
+          showSnack(context, state.message);
+          _reloadNhanVien();
         } else if (state is NhanVienError) {
-          final err = state.message;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Lỗi: $err')));
+          showSnack(context, state.message, isError: true);
         }
       },
-      child: Column(
-        children: [
-          /// SEARCH + FILTER + ADD
-          QLNVSearchBar(
-            searchController: searchController,
-            nhanVienList: nhanVienList,
-            onSearch: _onSearchChanged,
-            onClearSearch: _onClearSearch,
-            onFilterApplied: _onFilterApplied,
-            onAdd: _openAddDialog,
-          ),
+      builder: (context, state) {
+        final isLoading = state is NhanVienLoading && nhanVienList.isEmpty;
 
-          /// CHIP HIỂN THỊ FILTER
-          QLNVFilterChips(
-            filters: filters,
-            onClear: () {
-              setState(() {
-                filters.clear();
-                filteredList = nhomNhanVienList;
-              });
-            },
+        return Scaffold(
+          backgroundColor: context.background,
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _openDialog(),
+            backgroundColor: context.primary,
+            child: Icon(Icons.add, color: context.onPrimary, size: 28),
           ),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 20),
-              child: QLNVListView(
-                filteredList: filteredList,
-                currentUser: user?.userName,
-                onRefresh: () {
-                  context.read<NhanVienBloc>().add(GetNhanVienByVM(searchVM));
-                },
-                onEdit: _openEditDialog,
-                onDelete: _onDeleteNhanVien,
-                onAction: (nv, action) {
-                  if (action == 'approve') {
-                    _duyet(nv);
-                  } else if (action == 'unapprove') {
-                    _huyDuyet(nv);
-                  }
-                },
+          body: SafeArea(
+            child: RefreshIndicator(
+              color: context.primary,
+              backgroundColor: context.surfaceHighest,
+              onRefresh: () async => _reloadNhanVien(),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  88,
+                ),
+                children: [
+                  QLNVPageHeader(
+                    onBack: () => Navigator.pop(context),
+                    onAdd: () => _openDialog(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  QLNVStatsSection(
+                    totalEmployees: _displayList.length,
+                    totalDepartments: _departmentCount,
+                    approvedEmployees: _approvedCount,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  QLNVSearchBar(
+                    nhanVienList: nhanVienList,
+                    onSearch: _onSearchChanged,
+                    onClearSearch: _onClearSearch,
+                    onFilterApplied: _onFilterApplied,
+                    activeSearchQuery: searchQuery,
+                    title: 'DANH SÁCH NHÂN VIÊN',
+                  ),
+                  if (hasActiveFilters || searchQuery.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    QLNVFilterChips(
+                      filters: filters,
+                      searchQuery: searchQuery,
+                      onRemoveFilter: _removeSingleFilter,
+                      onClearAll: _clearFilters,
+                      onClearSearch: _onClearSearch,
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.md),
+                  QLNVListView(
+                    filteredList: _displayList,
+                    isLoading: isLoading,
+                    onEdit: (nv) => _openDialog(nv: nv),
+                    onDelete: _onDeleteNhanVien,
+                    onAction: (nv, action) {
+                      if (action == 'approve') {
+                        _duyetNhanVien(nv);
+                      } else if (action == 'unapprove') {
+                        _huyDuyetNhanVien(nv);
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

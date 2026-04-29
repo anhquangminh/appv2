@@ -1,7 +1,9 @@
+import 'package:ducanherp/core/themes/app_radius.dart';
+import 'package:ducanherp/core/themes/app_spacing.dart';
 import 'package:ducanherp/core/themes/app_theme_helper.dart';
+import 'package:ducanherp/data/models/nhanvien_model.dart';
 import 'package:ducanherp/presentation/widgets/common/app_card.dart';
 import 'package:flutter/material.dart';
-import 'package:ducanherp/data/models/nhanvien_model.dart';
 
 import 'qlnv_popup_menu.dart';
 
@@ -38,139 +40,188 @@ class QLNVListItem extends StatelessWidget {
     }
   }
 
+  String _initials() {
+    final words = nhanVien.tenNhanVien.trim().split(RegExp(r'\s+'));
+    if (words.isEmpty || words.first.isEmpty) return '?';
+    if (words.length == 1) return words.first.characters.first.toUpperCase();
+    return '${words.first.characters.first}${words.last.characters.first}'
+        .toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _status(context);
 
     return AppCard(
+      padding: EdgeInsets.zero,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.xlRadius,
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /// TÊN NHÂN VIÊN
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.people_alt_outlined,
-                          size: 14,
-                          color: context.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            nhanVien.tenNhanVien.isNotEmpty
-                                ? '${nhanVien.tenNhanVien[0].toUpperCase()}${nhanVien.tenNhanVien.substring(1)}'
-                                : '.',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: context.textPrimary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: context.secondaryContainer,
+                      borderRadius: AppRadius.mdRadius,
                     ),
-                    const SizedBox(height: 2),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _initials(),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: context.primary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nhanVien.tenNhanVien.isEmpty
+                              ? 'Nhan vien chua dat ten'
+                              : nhanVien.tenNhanVien,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
+                            color: context.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
 
-                    /// EMAIL / TÀI KHOẢN
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.email_outlined,
-                          size: 12,
-                          color: context.textSecondary,
+                        _MetaRow(
+                          icon: Icons.work_outline,
+                          text: nhanVien.chucVu.isEmpty ? '-' : nhanVien.chucVu,
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            nhanVien.taiKhoan.isNotEmpty
-                                ? nhanVien.taiKhoan
-                                : '-',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: context.textSecondary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        _MetaRow(
+                          icon: Icons.mail_outline_rounded,
+                          text:
+                              nhanVien.taiKhoan.isEmpty
+                                  ? '-'
+                                  : nhanVien.taiKhoan,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-
-                    /// CÔNG TY / PHÒNG BAN
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.home_work_outlined,
-                          size: 12,
-                          color: context.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${nhanVien.companyName}/${nhanVien.departmentName}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: context.textSecondary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-
-                    /// TRẠNG THÁI
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outlined,
-                          size: 12,
-                          color: context.textSecondary,
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: context.opacity(status.color, 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            status.text,
-                            style: TextStyle(
-                              color: status.color,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                  QLNVPopupMenu(
+                    nhanVien: nhanVien,
+                    onEdit: onEdit,
+                    onDelete: onDelete,
+                    onActionSelected: onActionSelected,
+                  ),
+                ],
               ),
-
-              /// POPUP MENU
-              QLNVPopupMenu(
-                nhanVien: nhanVien,
-                onEdit: onEdit,
-                onDelete: onDelete,
-                onActionSelected: onActionSelected,
+              const SizedBox(height: AppSpacing.md),
+              _InfoRow(
+                icon: Icons.apartment_rounded,
+                label: 'CHI NHANH',
+                value:
+                    nhanVien.companyName.isEmpty
+                        ? '-'
+                        : nhanVien.companyName.toUpperCase(),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _InfoRow(
+                icon: Icons.verified_outlined,
+                label: 'TRANG THAI',
+                value: status.text.toUpperCase(),
+                valueColor: status.color,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _MetaRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: context.textSecondary),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: context.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: context.background,
+        borderRadius: AppRadius.mdRadius,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: context.textPrimary),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            '$label: ',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: context.textSecondary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: valueColor ?? context.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

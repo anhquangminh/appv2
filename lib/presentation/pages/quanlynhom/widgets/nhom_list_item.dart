@@ -1,12 +1,15 @@
-import 'package:ducanherp/core/themes/app_radius.dart';
-import 'package:flutter/material.dart';
 import 'package:ducanherp/common/fa_icons.dart';
-import 'package:ducanherp/data/models/nhomnhanvien_model.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:ducanherp/core/themes/app_radius.dart';
+import 'package:ducanherp/core/themes/app_spacing.dart';
 import 'package:ducanherp/core/themes/app_theme_helper.dart';
+import 'package:ducanherp/data/models/nhomnhanvien_model.dart';
+import 'package:ducanherp/presentation/widgets/common/app_card.dart';
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class NhomListItem extends StatelessWidget {
   final NhomNhanVienModel nhom;
+  final int index;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -15,6 +18,7 @@ class NhomListItem extends StatelessWidget {
   const NhomListItem({
     super.key,
     required this.nhom,
+    required this.index,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -26,6 +30,36 @@ class NhomListItem extends StatelessWidget {
       return FontAwesomeIcons.users;
     }
     return faIcons[iconName] ?? FontAwesomeIcons.users;
+  }
+
+  String _statusLabel() {
+    switch (nhom.isActive) {
+      case 3:
+        return 'Đã duyệt';
+      case 0:
+        return 'Chờ duyệt thêm';
+      case 1:
+        return 'Chờ duyệt sửa';
+      case 2:
+        return 'Chờ duyệt xóa';
+      case 90:
+        return 'Đã xóa';
+      default:
+        return 'Không rõ';
+    }
+  }
+
+  Color _statusColor(BuildContext context) {
+    switch (nhom.isActive) {
+      case 3:
+        return context.focusPulse;
+      case 1:
+        return context.warning;
+      case 90:
+        return context.error;
+      default:
+        return context.primary;
+    }
   }
 
   void _showMenu(BuildContext context, GlobalKey key) async {
@@ -51,55 +85,41 @@ class NhomListItem extends StatelessWidget {
     final value = await showMenu<String>(
       context: context,
       position: position,
-      color: context.surface,
+      color: context.surfaceHighest,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
       items: [
-        PopupMenuItem(
+        _menuItem(
+          context,
           value: 'edit',
-          child: Row(
-            children: [
-              Icon(Icons.edit, size: 18, color: context.textPrimary),
-              const SizedBox(width: 8),
-              Text('Sửa', style: TextStyle(color: context.textPrimary)),
-            ],
-          ),
+          icon: Icons.edit_outlined,
+          label: 'Sửa',
         ),
-        PopupMenuItem(
+        _menuItem(
+          context,
           value: 'delete',
-          child: Row(
-            children: [
-              Icon(Icons.delete, size: 18, color: context.error),
-              const SizedBox(width: 8),
-              Text('Xóa', style: TextStyle(color: context.textPrimary)),
-            ],
-          ),
+          icon: Icons.delete_outline,
+          label: 'Xóa',
+          color: context.error,
         ),
         if (!isApproved) const PopupMenuDivider(),
         if (!isApproved)
-          PopupMenuItem(
+          _menuItem(
+            context,
             value: 'approve',
-            child: Row(
-              children: [
-                Icon(Icons.check, size: 18, color: context.success),
-                const SizedBox(width: 8),
-                Text('Duyệt', style: TextStyle(color: context.textPrimary)),
-              ],
-            ),
+            icon: Icons.check_circle_outline,
+            label: 'Duyệt',
+            color: context.success,
           ),
         if (!isApproved)
-          PopupMenuItem(
+          _menuItem(
+            context,
             value: 'unapprove',
-            child: Row(
-              children: [
-                Icon(Icons.undo, size: 18, color: context.warning),
-                const SizedBox(width: 8),
-                Text('Hủy duyệt', style: TextStyle(color: context.textPrimary)),
-              ],
-            ),
+            icon: Icons.undo_rounded,
+            label: 'Hủy duyệt',
+            color: context.warning,
           ),
       ],
     );
-
-    if (value == null) return;
 
     switch (value) {
       case 'edit':
@@ -108,179 +128,149 @@ class NhomListItem extends StatelessWidget {
       case 'delete':
         onDelete();
         break;
+      case 'approve':
+      case 'unapprove':
+        onActionSelected(value!);
+        break;
       default:
-        onActionSelected(value);
         break;
     }
+  }
+
+  PopupMenuItem<String> _menuItem(
+    BuildContext context, {
+    required String value,
+    required IconData icon,
+    required String label,
+    Color? color,
+  }) {
+    final resolvedColor = color ?? context.textPrimary;
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: resolvedColor),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: context.textPrimary),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final menuKey = GlobalKey();
+    final statusColor = _statusColor(context);
 
-    String statusText;
-
-    switch (nhom.isActive) {
-      case 3:
-        statusText = 'Đã duyệt';
-        break;
-      case 0:
-        statusText = 'Chờ duyệt thêm';
-        break;
-      case 1:
-        statusText = 'Chờ duyệt sửa';
-        break;
-      case 2:
-        statusText = 'Chờ duyệt xóa';
-        break;
-      case 90:
-        statusText = 'Đã xóa';
-        break;
-      default:
-        statusText = 'Không rõ';
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.border.withValues(alpha: 0.4)),
-      ),
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  width: 48, // 👉 vuông
-                  height: 48,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: context.textSecondary,
-                    borderRadius: AppRadius.mdRadius,
-                    border: Border.all(
-                      color: context.border.withValues(alpha: 0.4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: context.secondaryContainer,
+                  borderRadius: AppRadius.smRadius,
+                ),
+                alignment: Alignment.center,
+                child: FaIcon(
+                  _getGroupIcon(nhom.iconName),
+                  color: context.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nhom.tenNhom.isEmpty ? 'Nhóm chưa đặt tên' : nhom.tenNhom,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: context.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: context.shadow.withValues(alpha: 0.15),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _getGroupIcon(nhom.iconName),
-                    color: context.onPrimary.withValues(
-                      alpha: 0.9,
-                    ), // 👉 icon vẫn nổi
-                    size: 22,
-                  ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    _InfoRow(
+                      icon: Icons.business,
+                      text:
+                          nhom.companyName.isEmpty
+                              ? 'Chưa có công ty'
+                              : nhom.companyName,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    _InfoRow(
+                      icon: Icons.person,
+                      text:
+                          nhom.tenNhanVien.isEmpty
+                              ? 'Chưa có quản lý'
+                              : nhom.tenNhanVien,
+                      valueColor: context.primary,
+                      emphasize: true,
+                    ),
+                  ],
                 ),
-
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        nhom.tenNhom.isNotEmpty ? nhom.tenNhom : '.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: context.textPrimary,
-                        ),
+              ),
+              const SizedBox(width: AppSpacing.xxs),
+              Column(
+                children: [
+                  GestureDetector(
+                    key: menuKey,
+                    onTap: () => _showMenu(context, menuKey),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.xxs),
+                      child: Icon(
+                        Icons.expand_more_rounded,
+                        size: 22,
+                        color: context.textSecondary,
                       ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.business,
-                            size: 12,
-                            color: context.textSecondary.withValues(alpha: 0.7),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              nhom.companyName.isNotEmpty
-                                  ? nhom.companyName
-                                  : '-',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: context.textSecondary.withValues(
-                                  alpha: 0.7,
-                                ),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 2),
-
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person,
-                            size: 12,
-                            color: context.textSecondary.withValues(alpha: 0.7),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              nhom.tenNhanVien,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: context.textSecondary.withValues(
-                                  alpha: 0.7,
-                                ),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 👉 anchor icon
-                GestureDetector(
-                  key: menuKey,
-                  onTap: () => _showMenu(context, menuKey),
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.expand_more,
-                      color: context.textSecondary,
                     ),
                   ),
-                ),
-              ],
-            ),
+                  
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.md),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.md,
+            ),
             decoration: BoxDecoration(
               color: context.background,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: AppRadius.smRadius,
             ),
             child: Row(
               children: [
                 Expanded(
-                  child: _stat(
-                    "Thành viên",
-                    "${nhom.total}",
-                    context.textSecondary,
+                  child: _MetricColumn(
+                    title: 'THÀNH VIÊN',
+                    value: nhom.total.toString(),
+                    color: context.primary,
                   ),
                 ),
-                Container(height: 30, width: 1, color: context.divider),
+                Container(width: 2, height: 30, color: context.border),
                 Expanded(
-                  child: _stat("Trạng thái", statusText, context.success),
+                  child: _MetricColumn(
+                    title: 'TRẠNG THÁI',
+                    value: _statusLabel(),
+                    color: statusColor,
+                  ),
                 ),
               ],
             ),
@@ -289,29 +279,80 @@ class NhomListItem extends StatelessWidget {
       ),
     );
   }
+  
+}
 
-  Widget _stat(String title, String value, Color color) {
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color? valueColor;
+  final bool emphasize;
+
+  const _InfoRow({
+    required this.icon,
+    required this.text,
+    this.valueColor,
+    this.emphasize = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: context.textSecondary),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: valueColor ?? context.textSecondary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricColumn extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color color;
+
+  const _MetricColumn({
+    required this.title,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           title,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 9,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: context.textPrimary,
+            letterSpacing: 0.4,
             fontWeight: FontWeight.w700,
-            color: color.withValues(alpha: 0.6),
+            fontSize: 10
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: AppSpacing.xxs),
         Text(
           value,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: color,
+            fontWeight: FontWeight.w800,
+            fontSize: 10
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

@@ -25,7 +25,7 @@ class BottomBar extends StatelessWidget {
       child:  SizedBox(
       height: 64, // 👈 giảm tổng chiều cao BottomAppBar
       child: BottomAppBar(
-        color: context.surface,
+        color: context.surfaceHighest,
         elevation: 8,
         shape: const CircularNotchedRectangle(),
         notchMargin: 4, // 👈 nhỏ lại thêm
