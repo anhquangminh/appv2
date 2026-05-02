@@ -5,9 +5,12 @@ import 'package:ducanherp/core/themes/app_theme_helper.dart';
 import 'package:ducanherp/core/utils/snackbar_utils.dart';
 import 'package:ducanherp/data/models/application_user.dart';
 import 'package:ducanherp/data/models/nhomnhanvien_model.dart';
+import 'package:ducanherp/data/models/quanlynhanvien_model.dart';
 import 'package:ducanherp/logic/bloc/nhomnhanvien/nhomnhanvien_bloc.dart';
+import 'package:ducanherp/logic/bloc/quanlynhanvien/quanlynhanvien_bloc.dart';
 import 'package:ducanherp/presentation/pages/quanlynhanvien/quanlynhanvien_page.dart';
 import 'package:ducanherp/presentation/pages/quanlynhom/dialogs/nhom_nhan_vien_dialog.dart';
+import 'package:ducanherp/presentation/pages/quanlynhom/dialogs/nhom_thanh_vien_dialog.dart';
 import 'package:ducanherp/presentation/pages/quanlynhom/widgets/nhom_filter_chips.dart';
 import 'package:ducanherp/presentation/pages/quanlynhom/widgets/nhom_list_view.dart';
 import 'package:ducanherp/presentation/pages/quanlynhom/widgets/nhom_search_bar.dart';
@@ -32,6 +35,7 @@ class _QuanLyNhomPageState extends State<QuanLyNhomPage> {
 
   List<NhomNhanVienModel> nhomNhanVienList = [];
   List<NhomNhanVienModel> filteredList = [];
+  Map<String, int> memberCounts = {};
   Map<String, List<String>> filters = {};
   bool hasActiveFilters = false;
   String searchQuery = '';
@@ -91,11 +95,74 @@ class _QuanLyNhomPageState extends State<QuanLyNhomPage> {
         searchVM.groupId = user!.groupId;
       });
       _reloadGroups();
+      _reloadMemberCounts();
     }
   }
 
   void _reloadGroups() {
     context.read<NhomNhanVienBloc>().add(GetNhomNhanVienByVM(searchVM));
+  }
+
+  Future<void> _reloadMemberCounts() async {
+    if (user == null) return;
+
+    final countSearchVM = QuanLyNhanVienModel(
+      id: '',
+      idNhomNhanVien: '',
+      tenNhom: '',
+      groupId: user!.groupId,
+      companyId: '',
+      companyName: '',
+      createAt: DateTime.now(),
+      createBy: '',
+      isActive: -1,
+      pageNumber: 1,
+      pageSize: 1000,
+    );
+
+    try {
+      final members = await context
+          .read<QuanLyNhanVienBloc>()
+          .repository
+          .getQuanLyNhanVienByVM(countSearchVM);
+      if (!mounted) return;
+
+      final countBuckets = <String, Set<String>>{};
+      for (final member in members) {
+        if (member.isActive == 90 || member.idNhomNhanVien.isEmpty) continue;
+
+        final uniqueKey =
+            member.idNhanVien.trim().isNotEmpty
+                ? member.idNhanVien.trim().toLowerCase()
+                : member.taiKhoan.trim().toLowerCase();
+        if (uniqueKey.isEmpty) continue;
+
+        countBuckets
+            .putIfAbsent(member.idNhomNhanVien, () => <String>{})
+            .add(uniqueKey);
+      }
+
+      setState(() {
+        memberCounts = {
+          for (final entry in countBuckets.entries)
+            entry.key: entry.value.length,
+        };
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => memberCounts = {});
+    }
+  }
+
+  int _memberCountFor(NhomNhanVienModel nhom) {
+    final counted = memberCounts[nhom.id];
+    if (counted != null) return counted;
+    return nhom.total < 0 ? 0 : nhom.total;
+  }
+
+  void _onGroupMembersChanged() {
+    _reloadGroups();
+    _reloadMemberCounts();
   }
 
   void _onSearchChanged(String value) {
@@ -109,7 +176,8 @@ class _QuanLyNhomPageState extends State<QuanLyNhomPage> {
       searchQuery = '';
     });
   }
-void _removeSingleFilter(String key) {
+
+  void _removeSingleFilter(String key) {
     setState(() {
       // ❌ bỏ key hoàn toàn thay vì set []
       filters.remove(key);
@@ -122,39 +190,40 @@ void _removeSingleFilter(String key) {
     });
   }
 
-    void _rebuildFilteredList() {
-  final hasFilter = filters.values.any((e) => e.isNotEmpty);
+  void _rebuildFilteredList() {
+    final hasFilter = filters.values.any((e) => e.isNotEmpty);
 
-  setState(() {
-    hasActiveFilters = hasFilter;
+    setState(() {
+      hasActiveFilters = hasFilter;
 
-    if (!hasFilter) {
-      filteredList = nhomNhanVienList;
-      return;
-    }
-
-    filteredList = nhomNhanVienList.where((nv) {
-      // department
-      if (filters['companyName']?.isNotEmpty == true &&
-          !filters['companyName']!.contains(nv.companyName)) {
-        return false;
+      if (!hasFilter) {
+        filteredList = nhomNhanVienList;
+        return;
       }
 
-      // position
-      if (filters['tenNhom']?.isNotEmpty == true &&
-          !filters['tenNhom']!.contains(nv.tenNhom)) {
-        return false;
-      }
+      filteredList =
+          nhomNhanVienList.where((nv) {
+            // department
+            if (filters['companyName']?.isNotEmpty == true &&
+                !filters['companyName']!.contains(nv.companyName)) {
+              return false;
+            }
 
-      // status
-      if (filters['taiKhoan']?.isNotEmpty == true &&
-          !filters['taiKhoan']!.contains(nv.taiKhoan.toString())) {
-        return false;
-      }
-      return true;
-    }).toList();
-  });
-}
+            // position
+            if (filters['tenNhom']?.isNotEmpty == true &&
+                !filters['tenNhom']!.contains(nv.tenNhom)) {
+              return false;
+            }
+
+            // status
+            if (filters['taiKhoan']?.isNotEmpty == true &&
+                !filters['taiKhoan']!.contains(nv.taiKhoan.toString())) {
+              return false;
+            }
+            return true;
+          }).toList();
+    });
+  }
 
   void _onFilterApplied(
     Map<String, List<String>> appliedFilters,
@@ -214,6 +283,20 @@ void _removeSingleFilter(String key) {
     if (user == null) return;
     context.read<NhomNhanVienBloc>().add(
       DeleteNhomNhanVien(nhom.id, user!.userName),
+    );
+  }
+
+  void _openMembersDialog(NhomNhanVienModel nhom) {
+    if (user == null) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => NhomThanhVienDialog(
+            user: user!,
+            nhom: nhom,
+            onChanged: _onGroupMembersChanged,
+          ),
     );
   }
 
@@ -300,7 +383,7 @@ void _removeSingleFilter(String key) {
         );
         break;
       case _NhomSortMode.members:
-        list.sort((a, b) => b.total.compareTo(a.total));
+        list.sort((a, b) => _memberCountFor(b).compareTo(_memberCountFor(a)));
         break;
       case _NhomSortMode.pending:
         list.sort((a, b) {
@@ -317,123 +400,139 @@ void _removeSingleFilter(String key) {
   }
 
   int get _totalMembers =>
-      _displayList.fold<int>(0, (sum, item) => sum + item.total);
+      _displayList.fold<int>(0, (sum, item) => sum + _memberCountFor(item));
   int get _groupCount => _displayList.length;
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<NhomNhanVienBloc, NhomNhanVienState>(
+    return BlocListener<QuanLyNhanVienBloc, QuanLyNhanVienState>(
       listener: (context, state) {
-        if (state is NhomNhanVienVMLoaded) {
-          setState(() {
-            nhomNhanVienList = state.nhomNhanViens;
-            if (!hasActiveFilters) {
-              filteredList = state.nhomNhanViens;
-            }
-          });
-        }
-        if (state is NhomNhanVienError) {
-          showSnack(context, state.message, isError: true);
+        if (state is QuanLyNhanVienSuccess) {
           _reloadGroups();
-        }
-        if (state is NhomNhanVienSuccess) {
-          showSnack(context, state.message);
-          _reloadGroups();
+          _reloadMemberCounts();
         }
       },
-      builder: (context, state) {
-        final isLoading =
-            state is NhomNhanVienLoading && nhomNhanVienList.isEmpty;
+      child: BlocConsumer<NhomNhanVienBloc, NhomNhanVienState>(
+        listener: (context, state) {
+          if (state is NhomNhanVienVMLoaded) {
+            setState(() {
+              nhomNhanVienList = state.nhomNhanViens;
+              if (!hasActiveFilters) {
+                filteredList = state.nhomNhanViens;
+              }
+            });
+            _reloadMemberCounts();
+          }
+          if (state is NhomNhanVienError) {
+            showSnack(context, state.message, isError: true);
+            _reloadGroups();
+          }
+          if (state is NhomNhanVienSuccess) {
+            showSnack(context, state.message);
+            _reloadGroups();
+            _reloadMemberCounts();
+          }
+        },
+        builder: (context, state) {
+          final isLoading =
+              state is NhomNhanVienLoading && nhomNhanVienList.isEmpty;
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isTablet = constraints.maxWidth >= 768;
-            final horizontalPadding = isTablet ? AppSpacing.lg : AppSpacing.md;
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isTablet = constraints.maxWidth >= 768;
+              final horizontalPadding =
+                  isTablet ? AppSpacing.lg : AppSpacing.md;
 
-            return RefreshIndicator(
-              color: context.primary,
-              backgroundColor: context.surfaceHighest,
-              onRefresh: () async => _reloadGroups(),
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  AppSpacing.md,
-                  horizontalPadding,
-                  AppSpacing.xl,
-                ),
-                children: [
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: isTablet ? 760 : 560,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildOverviewCard(),
-                          SizedBox(
-                            height: isTablet ? AppSpacing.lg : AppSpacing.md,
-                          ),
-                          NhomSearchBar(
-                            nhomNhanVienList: nhomNhanVienList,
-                            onSearch: _onSearchChanged,
-                            onClearSearch: _onClearSearch,
-                            onFilterApplied: _onFilterApplied,
-                            onSortChanged: _onSortChanged,
-                            currentSortMode: sortMode.name,
-                            activeSearchQuery: searchQuery,
-                            compact: !isTablet,
-                          ),
-                          if (filters.values.any(
-                                (values) => values.isNotEmpty,
-                              ) ||
-                              searchQuery.isNotEmpty) ...[
-                            const SizedBox(height: AppSpacing.sm),
-                            NhomFilterChips(
-                              filters: filters,
-                              searchQuery: searchQuery,
-                              onRemoveFilter: _removeSingleFilter,
+              return RefreshIndicator(
+                color: context.primary,
+                backgroundColor: context.surfaceHighest,
+                onRefresh: () async {
+                  _reloadGroups();
+                  await _reloadMemberCounts();
+                },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    AppSpacing.md,
+                    horizontalPadding,
+                    AppSpacing.xl,
+                  ),
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: isTablet ? 760 : 560,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildOverviewCard(),
+                            SizedBox(
+                              height: isTablet ? AppSpacing.lg : AppSpacing.md,
+                            ),
+                            NhomSearchBar(
+                              nhomNhanVienList: nhomNhanVienList,
+                              onSearch: _onSearchChanged,
                               onClearSearch: _onClearSearch,
-                              onClear: () {
-                                setState(() {
-                                  filters.clear();
-                                  filteredList = nhomNhanVienList;
-                                  hasActiveFilters = false;
-                                });
+                              onFilterApplied: _onFilterApplied,
+                              onSortChanged: _onSortChanged,
+                              currentSortMode: sortMode.name,
+                              activeSearchQuery: searchQuery,
+                              compact: !isTablet,
+                            ),
+                            if (filters.values.any(
+                                  (values) => values.isNotEmpty,
+                                ) ||
+                                searchQuery.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.sm),
+                              NhomFilterChips(
+                                filters: filters,
+                                searchQuery: searchQuery,
+                                onRemoveFilter: _removeSingleFilter,
+                                onClearSearch: _onClearSearch,
+                                onClear: () {
+                                  setState(() {
+                                    filters.clear();
+                                    filteredList = nhomNhanVienList;
+                                    hasActiveFilters = false;
+                                  });
+                                },
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.md),
+                            NhomListView(
+                              filteredList: _displayList,
+                              searchVM: searchVM,
+                              isLoading: isLoading,
+                              onOpen: _openMembersDialog,
+                              onEdit: _openEditDialog,
+                              onDelete: _deleteNhom,
+                              onManageMembers: _openMembersDialog,
+                              getMemberCount: _memberCountFor,
+                              onAction: (nhom, action) {
+                                switch (action) {
+                                  case 'approve':
+                                    _duyetNhom(nhom);
+                                    break;
+                                  case 'unapprove':
+                                    _huyDuyetNhom(nhom);
+                                    break;
+                                }
                               },
                             ),
+                            const SizedBox(height: AppSpacing.lg),
                           ],
-                          const SizedBox(height: AppSpacing.md),
-                          NhomListView(
-                            filteredList: _displayList,
-                            searchVM: searchVM,
-                            isLoading: isLoading,
-                            onOpen: _openEditDialog,
-                            onEdit: _openEditDialog,
-                            onDelete: _deleteNhom,
-                            onAction: (nhom, action) {
-                              switch (action) {
-                                case 'approve':
-                                  _duyetNhom(nhom);
-                                  break;
-                                case 'unapprove':
-                                  _huyDuyetNhom(nhom);
-                                  break;
-                              }
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.lg),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -500,13 +599,10 @@ void _removeSingleFilter(String key) {
             alignment: Alignment.center,
             child: InkWell(
               onTap: () {
-               
                 Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const QuanLyNhanVienPage(),
-                        ),
-                      );
+                  context,
+                  MaterialPageRoute(builder: (_) => const QuanLyNhanVienPage()),
+                );
               },
               child: Icon(
                 Icons.badge_outlined,

@@ -5,7 +5,6 @@ import 'package:ducanherp/presentation/pages/home/widgets/bottom_bar.dart';
 import 'package:ducanherp/presentation/pages/home/widgets/home_app_bar.dart';
 import 'package:ducanherp/presentation/pages/profile_page.dart';
 import 'package:ducanherp/presentation/pages/quanlynhom/quanlynhom_page.dart';
-import 'package:ducanherp/presentation/pages/test_page.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -23,7 +22,6 @@ class _HomePageState extends State<HomePage> {
     const HomeContent(),
     const DuyetScreen(),
     QuanLyNhomPage(actionNotifier: _nhomActionNotifier),
-    const TestPage(),
     const ProfilePage(),
   ];
 

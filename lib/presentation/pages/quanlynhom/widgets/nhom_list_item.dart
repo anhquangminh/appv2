@@ -13,7 +13,9 @@ class NhomListItem extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onManageMembers;
   final Function(String action) onActionSelected;
+  final int? memberCount;
 
   const NhomListItem({
     super.key,
@@ -22,7 +24,9 @@ class NhomListItem extends StatelessWidget {
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
+    required this.onManageMembers,
     required this.onActionSelected,
+    this.memberCount,
   });
 
   IconData _getGroupIcon(String? iconName) {
@@ -62,6 +66,11 @@ class NhomListItem extends StatelessWidget {
     }
   }
 
+  int get _totalMembers {
+    final resolvedCount = memberCount ?? nhom.total;
+    return resolvedCount < 0 ? 0 : resolvedCount;
+  }
+
   void _showMenu(BuildContext context, GlobalKey key) async {
     final isApproved = nhom.isActive == 3;
 
@@ -88,6 +97,12 @@ class NhomListItem extends StatelessWidget {
       color: context.surfaceHighest,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
       items: [
+        _menuItem(
+          context,
+          value: 'members',
+          icon: Icons.group_add_outlined,
+          label: 'Thành viên',
+        ),
         _menuItem(
           context,
           value: 'edit',
@@ -122,6 +137,9 @@ class NhomListItem extends StatelessWidget {
     );
 
     switch (value) {
+      case 'members':
+        onManageMembers();
+        break;
       case 'edit':
         onEdit();
         break;
@@ -240,7 +258,6 @@ class NhomListItem extends StatelessWidget {
                       ),
                     ),
                   ),
-                  
                 ],
               ),
             ],
@@ -259,14 +276,16 @@ class NhomListItem extends StatelessWidget {
               children: [
                 Expanded(
                   child: _MetricColumn(
-                    title: 'THÀNH VIÊN',
-                    value: nhom.total.toString(),
+                    icon: Icons.groups_2_outlined,
+                    title: 'TỔNG NHÂN SỰ',
+                    value: _totalMembers.toString(),
                     color: context.primary,
                   ),
                 ),
                 Container(width: 2, height: 30, color: context.border),
                 Expanded(
                   child: _MetricColumn(
+                    icon: Icons.verified_outlined,
                     title: 'TRẠNG THÁI',
                     value: _statusLabel(),
                     color: statusColor,
@@ -279,7 +298,6 @@ class NhomListItem extends StatelessWidget {
       ),
     );
   }
-  
 }
 
 class _InfoRow extends StatelessWidget {
@@ -317,11 +335,13 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _MetricColumn extends StatelessWidget {
+  final IconData icon;
   final String title;
   final String value;
   final Color color;
 
   const _MetricColumn({
+    required this.icon,
     required this.title,
     required this.value,
     required this.color,
@@ -332,15 +352,21 @@ class _MetricColumn extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: context.textPrimary,
-            letterSpacing: 0.4,
-            fontWeight: FontWeight.w700,
-            fontSize: 10
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center ,
+          children: [
+            Icon(icon, color: color, size: 12),
+            const SizedBox(width: AppSpacing.xxs),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: context.textPrimary,
+                letterSpacing: 0.4,
+                fontSize: 10,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.xxs),
         Text(
@@ -349,7 +375,7 @@ class _MetricColumn extends StatelessWidget {
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: color,
             fontWeight: FontWeight.w800,
-            fontSize: 10
+            fontSize: 10,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

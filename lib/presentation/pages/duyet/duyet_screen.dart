@@ -33,6 +33,10 @@ class _DuyetScreenState extends State<DuyetScreen> {
   final ScrollController _scrollController = ScrollController();
 
   List<dynamic> tasksLoaded = [];
+  final Map<DuyetTabType, List<dynamic>> _tasksCache = {};
+  final Map<DuyetTabType, int> _totalCache = {};
+  final Map<DuyetTabType, int> _pageCache = {};
+  final Set<DuyetTabType> _loadedTabs = {};
 
   final Set<String> selectedItems = {};
   bool isSelectionMode = false;
@@ -109,6 +113,7 @@ class _DuyetScreenState extends State<DuyetScreen> {
 
   void _loadMore() {
     if (isLoading) return;
+    if (tasksLoaded.length >= totalItems && totalItems > 0) return;
 
     setState(() {
       isLoading = true;
@@ -124,6 +129,10 @@ class _DuyetScreenState extends State<DuyetScreen> {
       isLoading = true;
       totalItems = 0;
       tasksLoaded.clear();
+      _tasksCache.remove(currentTab);
+      _totalCache.remove(currentTab);
+      _pageCache.remove(currentTab);
+      _loadedTabs.remove(currentTab);
       selectedItems.clear();
       isSelectionMode = false;
     });
@@ -134,17 +143,40 @@ class _DuyetScreenState extends State<DuyetScreen> {
   void _switchTab(DuyetTabType type) {
     if (currentTab == type) return;
 
+    _saveCurrentTabCache();
+    final cachedTasks = _tasksCache[type];
+    final hasCache = _loadedTabs.contains(type) && cachedTasks != null;
+
     setState(() {
       currentTab = type;
-      currentPage = 0;
-      tasksLoaded.clear();
+      currentPage = hasCache ? (_pageCache[type] ?? 0) : 0;
+      totalItems = hasCache ? (_totalCache[type] ?? cachedTasks.length) : 0;
+      tasksLoaded = hasCache ? List<dynamic>.from(cachedTasks) : [];
       selectedItems.clear();
       isSelectionMode = false;
       expandedItems.clear();
-      isLoading = true;
+      isLoading = !hasCache;
     });
 
-    _loadTasks();
+    if (!hasCache) {
+      _loadTasks();
+    }
+  }
+
+  void _saveCurrentTabCache() {
+    _tasksCache[currentTab] = List<dynamic>.from(tasksLoaded);
+    _totalCache[currentTab] = totalItems;
+    _pageCache[currentTab] = currentPage;
+    if (tasksLoaded.isNotEmpty || totalItems > 0) {
+      _loadedTabs.add(currentTab);
+    }
+  }
+
+  void _cacheLoadedTabData() {
+    _tasksCache[currentTab] = List<dynamic>.from(tasksLoaded);
+    _totalCache[currentTab] = totalItems;
+    _pageCache[currentTab] = currentPage;
+    _loadedTabs.add(currentTab);
   }
 
   @override
@@ -175,6 +207,7 @@ class _DuyetScreenState extends State<DuyetScreen> {
             }
 
             selectedItems.remove(state.id);
+            _cacheLoadedTabData();
           });
         }
         if (state is StateAwaitingApprovalTasksLoaded &&
@@ -191,6 +224,7 @@ class _DuyetScreenState extends State<DuyetScreen> {
                 state.tasks.where((e) => !existingIds.contains(e.id)),
               );
             }
+            _cacheLoadedTabData();
           });
         }
 
@@ -198,6 +232,7 @@ class _DuyetScreenState extends State<DuyetScreen> {
             currentTab == DuyetTabType.daDuyet) {
           setState(() {
             isLoading = false;
+            totalItems = state.totalCount;
 
             if (currentPage == 0) {
               tasksLoaded = state.tasks;
@@ -207,13 +242,17 @@ class _DuyetScreenState extends State<DuyetScreen> {
                 state.tasks.where((e) => !existingIds.contains(e.id)),
               );
             }
+            _cacheLoadedTabData();
           });
         }
       },
       builder: (context, state) {
         final c = context;
 
-        if (state is StateDuyetLoading && currentPage == 0) {
+        if (state is StateDuyetLoading &&
+            currentPage == 0 &&
+            tasksLoaded.isEmpty &&
+            !_loadedTabs.contains(currentTab)) {
           return const Center(child: CircularProgressIndicator());
         }
 

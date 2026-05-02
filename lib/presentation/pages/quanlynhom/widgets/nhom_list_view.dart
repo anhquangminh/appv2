@@ -13,8 +13,10 @@ class NhomListView extends StatelessWidget {
   final bool isLoading;
   final Function(NhomNhanVienModel) onEdit;
   final Function(NhomNhanVienModel) onDelete;
+  final Function(NhomNhanVienModel) onManageMembers;
   final Function(NhomNhanVienModel) onOpen;
   final Function(NhomNhanVienModel, String action) onAction;
+  final int Function(NhomNhanVienModel) getMemberCount;
 
   const NhomListView({
     super.key,
@@ -23,8 +25,10 @@ class NhomListView extends StatelessWidget {
     required this.isLoading,
     required this.onEdit,
     required this.onDelete,
+    required this.onManageMembers,
     required this.onOpen,
     required this.onAction,
+    required this.getMemberCount,
   });
 
   @override
@@ -86,7 +90,9 @@ class NhomListView extends StatelessWidget {
           onTap: () => onOpen(nnv),
           onEdit: () => onEdit(nnv),
           onDelete: () => onDelete(nnv),
+          onManageMembers: () => onManageMembers(nnv),
           onActionSelected: (action) => onAction(nnv, action),
+          memberCount: getMemberCount(nnv),
         );
       },
     );
